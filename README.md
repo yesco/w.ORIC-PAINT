@@ -7,6 +7,7 @@ Try it out in the browser: [w.ORIC-PAIN](https://yesco.github.io/w.ORIC-PAINT/or
 
 # Capabilities
 
+- built-in *manual* - at the end
 - view HIRES screens with attributes
 - draw on the picture using dots
 - unlimited *UNDO*
@@ -14,7 +15,7 @@ Try it out in the browser: [w.ORIC-PAIN](https://yesco.github.io/w.ORIC-PAINT/or
 - various `brush`es
   - line diagonal down circle square
 - `spray 5` (%) using the current "brush"-shape
-- *unique:* unlimited "mixing" of colors, just select the color and paint! Undo, if you didn't like it.
+- *unique:* unlimited "mixing" of colors, just select the color and paint! Undo, if you didn't like it. See more detail in the manual/help.
 - `load` HIRES screens from file
 - `tap` to save the HIRES screen to a tap-file
    *Note:* for some reason the webbrowser add .txt to the name, lol
@@ -34,6 +35,10 @@ Try it out in the browser: [w.ORIC-PAIN](https://yesco.github.io/w.ORIC-PAINT/or
 - `5` == `m` == `magnenta`
 - `6` == `c` == `cyan`
 - `7` == 'w' == `white`
+
+- `clr` == clear bits of current brush, similar to `curset x,y,fb` fb=0
+- `set` == clear bits of current brush, similar to `curset x,y,fb` fb=1
+- `xor` == clear bits of current brush, similar to `curset x,y,fb` fb=2
 
 ## brushes
 

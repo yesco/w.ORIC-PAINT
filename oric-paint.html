@@ -5,13 +5,11 @@
 <body text="black" bgcolor="white">
 
 <div style='background-color: black; color:white; font-weight: bold; height: 1.5em;'>
-  <tt>&nbsp;&nbsp;w.ORIC PAINT (<a href='#man' style='color:cyan'>manual</a>)</tt>
-  <center><tt>&nbsp;&nbsp;-&nbsp;https://yesco.github.io/w.ORIC-PAINT/</tt></center>
+  <tt>&nbsp;&nbsp;w.ORIC PAINT (<a id='manual' href='#man' style='color:cyan'>manual</a>)</tt>
+  <tt>&nbsp;&nbsp;-&nbsp;https://yesco.github.io/w.ORIC-PAINT/</tt>
   <tt style='position:absolute;right:0'>CAPS&nbsp;&nbsp;</tt><br/>
 </div>
 <br/>
-
-
 <style>
   .cmd {
       width: 1.8em; height: 2em;
@@ -31,7 +29,7 @@
 </style>
 
 <center>
-
+<input id="input" size=1 autocomplete='off' autocorrect='off' />
 <nobr style='text-align:top'>
 <a class='cmd sel' title='brush thin'>&#8901;</a>
 <a class='cmd sel' title='brush flat'>&#8213;</a>
@@ -257,12 +255,7 @@ function isprefix(pre, s) {
 Your browser does not support the HTML canvas tag.</canvas>
 <br/>
 <input type="file" id="files" multiple accept="*" style="display:none"/>
-
-
-<nobr>
-  <button id="load" type="button">Load</button>
-  CMD: <input id="input" size=50 autocomplete=off autocorrect=off />
-</nobr>
+<button id="load" type="button" style='display:none'>Load</button>
 
 </center>
 
@@ -284,15 +277,20 @@ function log(s) {
   dom('log').value+= s+"\n";
 }
 
-var popover= dom('popover');
+var Dpopover= dom('popover');
+
+function popover(html) {
+  Dpopover.classList.remove('fadeout');
+  // TODO: doesn't work
+  //Dpopover.style.animation= 'fadeOut ease '+(optSeconds? optSeconds: 2)+'s forwards';
+  Dpopover.innerHTML= html;
+  Dpopover.offsetWidth; // lol triggers reflow!
+  Dpopover.classList.add('fadeout');
+  // Dpopover.showModal(); //doesn' do it?
+}
 
 function runCommand(cmd) {
-  // TODO: rewrite?
-  popover.classList.remove('fadeout');
-  popover.innerText= cmd;
-  popover.offsetWidth; // lol triggers reflow!
-  popover.classList.add('fadeout');
-  // popover.showModal(); //doesn' do it?
+  popover(cmd);
 
   log('runCommand: '+cmd);
 
@@ -495,16 +493,23 @@ function runCommand(cmd) {
   if (cmd.startsWith('set')) { drawink= 1; return true; }
   if (cmd.startsWith('xor')) { drawink= 2; return true; }
 
+  if (cmd.startsWith('man') || cmd.startsWith('help')) {
+    undo(); // lol
+    dom('manual').click();
+    return true;
+  }
+
   // everything else is tried as a color
   if (!isNaN(nf)) {
+    undo();
     log("draw "+ nf);
     drawink= 64+(nf&7);
     return true;
   }
 
   // fail
-  alert("Unrecognized command: "+cmd);
-  Dinput.select();
+  popover("<span style='color:red'>Unrecognized command: "+cmd+'</span>', 5);
+  //Dinput.select();
   return false;
 }
 
@@ -1168,6 +1173,10 @@ document.body.onkeypress= function(e) {
   return false;
 }
 
+Dinput.onkeyup= function(e) {
+  popover(Dinput.value, 5);
+}
+
 Dinput.onsubmit= function(e) {
   alert(Dinput.value);
 }
@@ -1271,9 +1280,15 @@ function step(state) {
 
 <h2>Colors</h2>
 
+There are 3 concept of colors:
+<ul>
+<li><tt>paper</tt> - sets the "paper" color in column 0</li>
+<li><tt>ink</tt> - sets the "ink" color in column 1</li>
+<li><tt>draw</tt> - sets a "drawink" - which is auto-colored when drawing!</li>
+
 <p>colors can be selected on the screen, or just written:
 <ul>
-<li><tt>paper blue</tt></li>
+<li><tt>paper blue</tt> or <tt>bg u<tt> eller <tt>bg 4</tt></li>
 <li><tt>ink white</tt></li>
 <li><tt>draw yellow</tt></li>
 </p>
