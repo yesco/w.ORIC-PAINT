@@ -197,9 +197,10 @@
 <br/>
 
 <script>
+
 // catch error as we have no console....
 // window.onerror = function (event, souce, lineno, colon, error) { }
-body.onerror= function(e, src, ln, colon, err) {
+document.onerror= function(e, src, ln, colon, err) {
   alert('ERROR '+src+':'+ln+' - '+err);
 }
 
@@ -274,7 +275,8 @@ function dom(name, optAction) {
 }
 
 function log(s) {
-  dom('log').value+= s+"\n";
+  // log first in box
+  dom('log').value= s+"\n"+dom('log').value;
 }
 
 var Dpopover= dom('popover');
@@ -300,8 +302,13 @@ function runCommand(cmd) {
   var n= colornum(param);
   var nf= colornum(before(cmd, ' '));
 
+  if (nf>=0 && nf<8) {
+    drawink= DRAWINK+nf;
+    return true;
+  }
+
   if (cmd.startsWith("draw ")) {
-    drawink= n;
+    drawink= DRAWINK+n;
     return true;
   }
   if (cmd.startsWith('paper ') || cmd.startsWith('bg ')) {
@@ -503,7 +510,7 @@ function runCommand(cmd) {
   if (!isNaN(nf)) {
     undo();
     log("draw "+ nf);
-    drawink= 64+(nf&7);
+    drawink= DRAWINK+(nf&7);
     return true;
   }
 
@@ -515,7 +522,7 @@ function runCommand(cmd) {
 
 function convertToOric(pix){
   // each line, backwards!
-  ci= 0;
+  uci= 0;
   for(var r=0; r<200; ++r) {
 
     // useful info?
@@ -540,7 +547,7 @@ function convertToOric(pix){
       var v= ( (x[0]?32:0) + (x[1]?16:0) + (x[2]?8:0) +
                (x[3]?4:0) + (x[4]?2:0) + (x[5]?1:0) + 64);
       var same= x.every( (z)=> (z==x[0]) );
-      cell[ci+c]= v;
+      cell[uci+c]= v;
     }
 
     // find two most common colors
@@ -549,18 +556,18 @@ function convertToOric(pix){
       if (colfreq[i]==mx[0]) bg= i;
       if (colfreq[i]==mx[1]) fg= i;
     }
-    cell[ci+0]= bg+16;
-    cell[ci+1]= fg;
+    cell[uci+0]= bg+16;
+    cell[uci+1]= fg;
 
     log("row="+r+" bg="+bg+" fg="+fg+" freq="+colfreq.toString()+" max="+mx.toString());
 
-    ci+= 40;
+    uci+= 40;
   }
 }
 
 function convertToOricJustAttributes(pix) {
   // each line, backwards!
-  ci= 0;
+  uci= 0;
   for(var r=0; r<200; ++r) {
 
     // useful info?
@@ -582,16 +589,16 @@ function convertToOricJustAttributes(pix) {
                (x[3]?4:0) + (x[4]?2:0) + (x[5]?1:0) + 64);
       var same= x.every( (z)=> (z==x[0]) );
       // TODO: if same, maybe can consider other coding tech w attributes/inversion?
-      cell[ci+c]= or+16; // make (avg) color background for this cell
+      cell[uci+c]= or+16; // make (avg) color background for this cell
     }
 
-    ci+= 40;
+    uci+= 40;
   }
 }
 
 function convertToOricJustPixels(pix){
   // each line, backwards!
-  ci= 0;
+  uci= 0;
   for(var r=0; r<200; ++r) {
 
     for(var c=39; c>=0; --c) {
@@ -609,10 +616,10 @@ function convertToOricJustPixels(pix){
                (x[3]?4:0) + (x[4]?2:0) + (x[5]?1:0) + 64);
       var same= x.every( (z)=> (z==x[0]) );
       // TODO: if same, maybe can consider other coding tech w attributes/inversion?
-      cell[ci+c]= v;
+      cell[uci+c]= v;
     }
 
-    ci+= 40;
+    uci+= 40;
   }
 }
 
@@ -710,21 +717,21 @@ const DRAWINK=64;
 var drawink= DRAWINK+colornum('yellow'); // draw ink is 0,1,2,3 or 128+colornum
 
 // running data state for graphics during update
-var x, y, ci, bg, fg;
+var ux, uy, uci, ubg, ufg;
 
 function setpaperink(p, i) {
   //alert("set papper ink:"+p+" i:"+i);
   paper= p; ink= i;
-  for(ci=0; ci<cell.length; ci+= 40) {
-    cell[ci]  = paper+16;
-    cell[ci+1]= ink;
+  for(uci=0; uci<cell.length; uci+= 40) {
+    cell[uci]  = paper+16;
+    cell[uci+1]= ink;
   }
   updatehires();
 }
 
 function resethires() {
-  ci=x=y= 0;
-  bg= 0; fg= 7;
+  uci=ux=uy= 0;
+  ubg= 0; ufg= 7;
   cell.fill(ink);
   setpaperink(paper, ink);
   updatehires();
@@ -733,11 +740,11 @@ function resethires() {
 resethires();
 
 function nextcell() {
-  if (ci>= 240*40) return;
+  if (uci>= 240*40) return;
 
-  var v= cell[ci];
+  var v= cell[uci];
   // colors reset every line
-  if (ci%40==0) { bg=0; fg=7; x= 0; }
+  if (uci%40==0) { ubg=0; ufg=7; ux= 0; }
 
   var i= v&7;
 
@@ -747,47 +754,47 @@ function nextcell() {
   if (vl<32) { // attributes
     //alert("vl= "+vl+" i="+i);
     // change color
-    if (vl>= 0 && vl< 8) fg= i;
-    if (vl>=16 && vl<24) bg= i;
+    if (vl>= 0 && vl< 8) ufg= i;
+    if (vl>=16 && vl<24) ubg= i;
 
     // draw current attr
-    var b= colors[(v&128)? 7-bg: bg];
+    var b= colors[(v&128)? 7-ubg: ubg];
     //b= 'yellow'; // for debug set yellow
     ctx.fillStyle= b;
-    ctx.fillRect(x, y, 6*w, h);
-    x+= 6*w;
+    ctx.fillRect(ux, uy, 6*w, h);
+    ux+= 6*w;
 
   } else { // pixels 32..63, 63..127
 
-    var b= colors[(v&128)? 7-bg: bg];
-    var f= colors[(v&128)? 7-fg: fg];
+    var b= colors[(v&128)? 7-ubg: ubg];
+    var f= colors[(v&128)? 7-ufg: ufg];
 
     // draw 6 pixels
-    for(i=0; i<6; ++i) {
+    for(var i=0; i<6; ++i) {
       ctx.fillStyle= (v&32)? f: b;
-      ctx.fillRect(x, y, w, h);
-      v <<= 1; x+= w;
+      ctx.fillRect(ux, uy, w, h);
+      v <<= 1; ux+= w;
     }
 
   }
 
-  if (x>=240*w) { x=0; y+= h; }
-  ++ci;
+  if (ux>=240*w) { ux=0; uy+= h; }
+  ++uci;
 }
 
 function updatehires() {
-  x= 0; y= 0; ci= 0;
-  while(ci<240*40)
+  ux= 0; uy= 0; uci= 0;
+  while(uci<240*40)
     nextcell();
 }
 
 function partialupdate() {
   // only need to update the row
   // this will get right colors and effect
-  var oy= Math.floor(ci/40);
-  x= 0;
-  y= 2*oy;
-  ci= 40*oy;
+  var oy= Math.floor(uci/40);
+  ux= 0;
+  uy= 2*oy;
+  uci= 40*oy;
   for(var i=40; i--;) nextcell();
 }
 
@@ -796,7 +803,7 @@ function partialupdate() {
 
 function invert() {
   // get CanvasPixelArray
-  var imgd = context.getImageData(x, y, width, height);
+  var imgd = context.getImageData(ux, uy, width, height);
   var pix = imgd.data;
 
   // invert each pixel
@@ -808,7 +815,7 @@ function invert() {
   }
 
   // Draw ImageData at (x,y)
-  context.putImageData(imgd, x, y);
+  context.putImageData(imgd, ux, uy);
 }
 
 // return oric 0-7 color from rgb!
@@ -870,23 +877,23 @@ var startPos = { x:0, y:0 };
 function curset(ox, oy, f) {
   ox= Math.floor(ox); oy= Math.floor(oy);
   if (ox<0 || oy<0 || ox>=240 || oy>=200) {
-    ci= -1;
+    uci= -1;
     return;
   }
   var cm= 32>>(ox%6);
-  ci= Math.floor(ox/6) + oy*40;
+  uci= Math.floor(ox/6) + oy*40;
 
   // don't set bits in paper attributes
-  var v= cell[ci]&127;
+  var v= cell[uci]&127;
   if (v>=16 && v<16+8) return;
 
   // steal ink cell and make it ours!
-  if (v<8) cell[ci]= 64 | (cell[ci]&128);
+  if (v<8) cell[uci]= 64 | (cell[uci]&128);
 
   switch(f) {
-  case 0: cell[ci] &= ~cm; break;
-  case 1: cell[ci] |=  cm; break;
-  case 2: cell[ci] ^=  cm; break;
+  case 0: cell[uci] &= ~cm; break;
+  case 1: cell[uci] |=  cm; break;
+  case 2: cell[uci] ^=  cm; break;
   case 3: return;
 
   // >=DRAWINK over-write color
@@ -897,7 +904,7 @@ function curset(ox, oy, f) {
       // -- find ink to set after
       // artifact: double shadow... lol
 
-      var i= ci+1;
+      var i= uci+1;
 
       // TODO: this doesn't work as good as you expect
       //   as we're cursetting many in same row...
@@ -919,16 +926,16 @@ function curset(ox, oy, f) {
         }
         // replicate that ink
         // TODO: corner-cases
-        if ((oldcell[ci+1]&127)>=64 &&
+        if ((oldcell[uci+1]&127)>=64 &&
             afterink != -1 &&
             afterink != f&7) {
-          var c= cell[ci+1]= afterink || (oldcell[ci+1]&128);
+          var c= cell[uci+1]= afterink || (oldcell[uci+1]&128);
           log('afterink: '+afterink);
         }
       }
 
       // set current drawink before
-      i= ci-1; 
+      i= uci-1; 
       while((i%40)!=0) {
         var c= cell[i]&127;
 
@@ -941,35 +948,36 @@ function curset(ox, oy, f) {
         --i;
       }
 
-      var v= cell[ci];
+      var v= cell[uci];
 
       // don't steal paper
       if (v>=16 && v<24) return;
       if (v>=128+16 && v<128+24) return;
 
       // steal ink cell and make it ours!
-      if (v<8) cell[ci]= 64 | (cell[ci]&128);
+      if (v<8) cell[uci]= 64 | (cell[uci]&128);
 
 
       // draw pixel
-      cell[ci] |= cm; return;
+      cell[uci] |= cm; return;
     }
   }
 }
 
 function changed(pos) {
-  ox= Math.floor((pos.x+1)/2);
-  oy= Math.floor((pos.y+1)/2);
+  var ox= Math.floor((pos.x+1)/2);
+  var oy= Math.floor((pos.y+1)/2);
   var v= 0+dom("cell").value;
   if (v>0) {
     curset(ox, oy, 3);
-    cell[ci]= 0+v;
+    cell[uci]= 0+v;
     partialupdate();
-  } else 
-    drawbrush();
+  } else {
+    drawbrush(ox, oy);
+  }
 }
 
-function drawbrush() {
+function drawbrush(ox, oy) {
   var brush= dom("brush").value;
   var size= 0+dom("size").value;
   var draw= dom("draw").value;
@@ -977,6 +985,7 @@ function drawbrush() {
               0+after(draw, 'spray'):
               100)/100.0;
   var f= drawink;
+  //alert(drawink);
   //var f= drawink==ink? 1: 16+drawink;
   //var f= drawink+16;
   
@@ -1028,6 +1037,7 @@ function drawbrush() {
     for(var r= -h; r<= +h; ++r) {
       // draw from right to left, not to smear attributes
       var firstinrow= 128;
+      uci= -1;
       for(var c=+w; c>= -w; --c) {
         if (r*r+c*c<radius*radius
             && Math.random()<=spray) {
@@ -1173,6 +1183,72 @@ document.body.onkeypress= function(e) {
   return false;
 }
 
+var lastKey= null;
+
+var x=120, y=100, sx=x, sy=y;
+
+document.onkeydown= function(e) {
+  lastKey= e;
+  var k= e.key;
+  if (k=='ArrowUp' || k=='ArrowDown' || k=='ArrowLeft' || k=='ArrowRight') {
+    e.arrow= k? k: null;
+
+    // direction
+    var dx=0, dy=0;
+    switch(k) {
+    case 'ArrowUp':    dy= -1; break;
+    case 'ArrowDown':  dy= +1; break;
+    case 'ArrowRight': dx= +1; break;
+    case 'ArrowLeft':  dx= -1; break;
+    }
+
+    // faster movement with ALT
+    if (e.altKey)       {dx*=6; dy*=6;}
+
+    // action
+    if (e.shiftKey)     {sx+= dx;sy+= dy;}
+    else if (e.ctrlKey) {xx+= dx;xy+= dy; x+= dx;y+= dy;}
+    else                { x+= dx; y+= dy;}
+
+    // bounds
+    if (y<0)    y= 0;
+    if (y>199)  y= 199;
+    if (x>239)  x= 239;
+    if (x<0)    x= 0;
+
+    if (sy<y)   sy= y;
+    if (sy>199) sy= 199;
+    if (sx>239) sx= 239;
+    if (sx<x)   sx= x;
+
+    if (x>sx)   x= sx;
+    if (y>sy)   x= sy;
+
+    updatehires();
+    ctx.fillStyle= 'pink';
+    ctx.fillRect(x*w, y*h, (sx-x)*w, (sy-y)*h);
+
+    e.preventDefault();
+  }
+
+  log('KeyBoardEvent: '
+      + ' x'+x
+      + ' y'+y
+      + ' sx'+sx
+      + ' sy'+sy
+      + ' '
+      + (e.repeat?   'R': '')
+      + (e.metaKey?  'M': '')
+      + (e.altKey?   'A': '')
+      + (e.ctrlKey?  'C': '')
+      + (e.shiftKey? 'S': '')
+      + ' code: ' + e.code
+      + ' key: ' + e.key
+      //+ " charCode: " + e.charCode
+      //+ " keyCode: " + e.keyCode
+     );
+}
+
 Dinput.onkeyup= function(e) {
   popover(Dinput.value, 5);
 }
@@ -1187,7 +1263,6 @@ Dinput.onchange= function() {
   Dinput.value= "";
   return false;
 }
-
 </script>
 
 </body>
